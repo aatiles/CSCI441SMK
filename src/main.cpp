@@ -54,11 +54,13 @@ glm::vec2 mousePos;			              		  	// last known X and Y of the mouse
 // Camera Stuff
 float       cameraTheta, cameraPhi;               		// camera DIRECTION in spherical coordinates
 glm::vec3   camDir; 			                    	// camera DIRECTION in cartesian coordinates
+glm::vec3   cameraPos;                                          // camera POSITION in cartesian coordinates
 float       camRadius   = 2;                // Distance of camera from vehicle
 float       upper_ang   = 2*M_PI/3;         // Upper Bound of camera angle
 float       lower_ang   = 4*M_PI/7;         // Lower Bound of camera angle
 int         zoom        = 0;                // state of control to zoom
 float       zoomScale   = 20;               // Rate at which zoom occurs based on change in mouse
+int         veiwport    = 0;                // Veiwport of camera
 
 // Vehicle stuff
 glm::vec3 vehicleLoc;
@@ -220,6 +222,10 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
                     toggle_curve       = !toggle_curve;
                     break;
                 }
+            case GLFW_KEY_1:
+                if (action == GLFW_PRESS){
+                    veiwport = (veiwport + 1)%2;
+                }
 	}
 }
 
@@ -369,7 +375,7 @@ void updateState(){
     if (turnLeft == GLFW_PRESS || turnLeft == GLFW_REPEAT){
         vehiclePhi = vehiclePhi - turnSpeed; 
     }
-    // Check if the vehicle is turning right
+    // cated at vehicleicle is turning right
     if (turnRight == GLFW_PRESS || turnRight == GLFW_REPEAT){
         vehiclePhi = vehiclePhi + turnSpeed; 
     }
@@ -657,6 +663,36 @@ void renderScene(void)  {
     drawVehicle();
 }
 
+void genCamera(){
+    switch( veiwport){
+        case 0:{
+            camRadius   = 2;                // Distance of camera from vehicle
+            upper_ang   = 2*M_PI/3;         // Upper Bound of camera angle
+            lower_ang   = 4*M_PI/7;         // Lower Bound of camera angle
+            zoom        = 0;                // state of control to zoom
+            glm::mat4 viewMtx = glm::lookAt(    (vehicleLoc-(camRadius*camDir)),		// camera is located on an arcball
+	    	    	        		    vehicleLoc,		// camera is looking at vehilce
+	        				    glm::vec3(  0,  1,  0 ) );		// up vector is (0, 1, 0) - positive Y
+            // multiply by the look at matrix - this is the same as our view martix
+            glMultMatrixf( &viewMtx[0][0] );
+            break;
+        }
+        case 1:{
+            camRadius   = 5;                // Distance of camera from vehicle
+            upper_ang   = 2*M_PI/3;         // Upper Bound of camera angle
+            lower_ang   = 0;         // Lower Bound of camera angle
+            zoom        = 0;                // state of control to zoom
+            glm::mat4 viewMtx = glm::lookAt(        vehicleLoc + glm::vec3(0,1,0),		// camera is located at vehicle
+                                                    vehicleLoc + camRadius*camDir + glm::vec3(0,1,0),		// camera is looking infront of vehicle
+	        				    glm::vec3(  0,  1,  0 ) );		// up vector is (0, 1, 0) - positive Y
+            // multiply by the look at matrix - this is the same as our view martix
+            glMultMatrixf( &viewMtx[0][0] );
+            break;
+
+        }
+    }
+}
+
 //*************************************************************************************
 //
 // Setup Functions
@@ -818,12 +854,7 @@ int main( int argc, char *argv[] ) {
 
 		// set up our look at matrix to position our camera
 		// TODO #6: Change how our lookAt matrix gets constructed
-		glm::mat4 viewMtx = glm::lookAt(    (vehicleLoc-(camRadius*camDir)),		// camera is located on an arcball
-					            vehicleLoc,		// camera is looking at vehilce
-						    glm::vec3(  0,  1,  0 ) );		// up vector is (0, 1, 0) - positive Y
-		// multiply by the look at matrix - this is the same as our view martix
-		glMultMatrixf( &viewMtx[0][0] );
-
+                genCamera();
                 renderScene();					// draw everything to the window
 
 		glfwSwapBuffers(window);// flush the OpenGL commands and make sure they get rendered!
