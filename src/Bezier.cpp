@@ -23,10 +23,34 @@
 #include <vector>				// for vector
 #include <string>
 
+vector<vector<glm::vec3>> surfacePts;
+
 glm::vec3 evaluateBezierCurve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t);
 glm::vec3 evaluateBezierSurface(vector<glm::vec3> pts, float u, float v);
 
 using namespace std;
+
+vector<vector<glm::vec3>> getControlPoints(char *filename, int *row, int *col) {
+    vector<vector<glm::vec3>> vecs;
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        perror("fopen getControlPoints");
+        exit(errno);
+    }
+    
+    /* row x col */
+    fscanf(f, "%d %d\n", row, col);
+    
+    vecs.reserve(row);
+    for (int i = 0; i < *row; i++) {
+        vecs[i].reserve(*col);
+        for (int j = 0; j < *col; j++) {
+            glm::vec3 *vec = &vecs[i][j];
+            fscanf("%d %d %d ", &vec->x, &vec->y, &vec->z);
+        }
+    }
+    return vecs;
+}
 
 // evaluateBezierCurve() ////////////////////////////////////////////////////////
 //
@@ -36,7 +60,8 @@ using namespace std;
 glm::vec3 evaluateBezierCurve(glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t) {
 	glm::vec3 point(0, 0, 0);
 
-	point = p0 + t*((-3.0f * p0 + 3.0f * p1) + t*((3.0f*p0 - 6.0f*p1 + 3.0f*p2) + t*(-1.0f*p0 + 3.0f*p1 - 3.0f*p2 + p3)));
+    point = p0 + t*((-3.0f * p0 + 3.0f * p1) + t*((3.0f*p0 - 6.0f*p1 + 3.0f*p2)
+               + t*(-1.0f*p0 + 3.0f*p1 - 3.0f*p2 + p3)));
 
 	return point;
 }
@@ -60,4 +85,33 @@ glm::vec3 evaluateBezierSurface(vector<glm::vec3> pts, float u, float v) {
         pu[i] = evaluateBezierCurve(pts.at(i * 4), pts.at(i * 4 + 1), pts.at(i * 4 + 2), pts.at(i * 4 + 3), u);
     }
     return evaluateBezierCurve(pu[0], pu[1], pu[2], pu[3], v);
+}
+
+int main() {
+    int row, col;
+    float step = 0.05f;
+    vector<vector<glm::vec3>> vecs; 
+    vecs = getControlPoints("flat_terrain.csv", &row, &col); 
+
+    surfacePts.reserve(row*(1.f/step+1));
+
+    for (int i = 0; i < row; i += 3) {
+        for (int j = 0; j < col; j += 3) {
+            surfacePts[i].reserve(col*(1.f/step+1));
+
+            vector<glm::vec3> pts = {
+                vecs[i][j],   vecs[i+1][j],   vecs[i+2][j],   vecs[i+3][j],
+                vecs[i][j+1], vecs[i+1][j+1], vecs[i+2][j+1], vecs[i+3][j+1],
+                vecs[i][j+2], vecs[i+1][j+2], vecs[i+2][j+2], vecs[i+3][j+2],
+                vecs[i][j+3], vecs[i+1][j+3], vecs[i+2][j+3], vecs[i+3][j+3],
+            };
+            for (float k = 0; k <= 1; k += step) {
+                for (float l = 0; l <= 1; l += step) {
+                    surfacePts[i+k/step][j+l/step] = 
+                        evaluateBezierSurface(pts, k, l);
+                }
+            }
+        }
+    } 
+
 }
