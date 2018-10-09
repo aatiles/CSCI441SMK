@@ -60,7 +60,9 @@ float       upper_ang   = 2*M_PI/3;         // Upper Bound of camera angle
 float       lower_ang   = 4*M_PI/7;         // Lower Bound of camera angle
 int         zoom        = 0;                // state of control to zoom
 float       zoomScale   = 20;               // Rate at which zoom occurs based on change in mouse
-int         veiwport    = 0;                // Veiwport of camera
+int         veiwport    = 0;                // Veiwport of camerai
+int         camera_mov  = 0;
+float       camSpeed    = .08;
 
 // Vehicle stuff
 glm::vec3 vehicleLoc;
@@ -211,6 +213,8 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
                 break;
             case GLFW_KEY_LEFT_CONTROL: zoom    = action;
                 break;
+            case GLFW_KEY_SPACE: camera_mov     = action;
+                break;
             case GLFW_KEY_C: {
                 if (action == GLFW_PRESS){
                     toggle_cage        = !toggle_cage;
@@ -224,7 +228,7 @@ static void keyboard_callback( GLFWwindow *window, int key, int scancode, int ac
                 }
             case GLFW_KEY_1:
                 if (action == GLFW_PRESS){
-                    veiwport = (veiwport + 1)%2;
+                    veiwport = (veiwport + 1)%3;
                 }
 	}
 }
@@ -416,6 +420,9 @@ void updateState(){
         fairy_seg  = fairy_seg + 1;
     }
     fairy_seg = fairy_seg%(controlPoints.size()/3);
+    if (camera_mov == GLFW_PRESS || camera_mov == GLFW_REPEAT){
+        cameraPos = cameraPos + camSpeed*camDir;
+    }
 }
 
 // Draw the handlebars of the bike
@@ -675,6 +682,7 @@ void genCamera(){
 	        				    glm::vec3(  0,  1,  0 ) );		// up vector is (0, 1, 0) - positive Y
             // multiply by the look at matrix - this is the same as our view martix
             glMultMatrixf( &viewMtx[0][0] );
+            cameraPos = vehicleLoc;
             break;
         }
         case 1:{
@@ -684,6 +692,20 @@ void genCamera(){
             zoom        = 0;                // state of control to zoom
             glm::mat4 viewMtx = glm::lookAt(        vehicleLoc + glm::vec3(0,1,0),		// camera is located at vehicle
                                                     vehicleLoc + camRadius*camDir + glm::vec3(0,1,0),		// camera is looking infront of vehicle
+	        				    glm::vec3(  0,  1,  0 ) );		// up vector is (0, 1, 0) - positive Y
+            // multiply by the look at matrix - this is the same as our view martix
+            glMultMatrixf( &viewMtx[0][0] );
+            cameraPos = vehicleLoc;
+            break;
+
+        }
+        case 2:{
+            camRadius   = 5;                // Distance of camera from vehicle
+            upper_ang   = 2*M_PI/3;         // Upper Bound of camera angle
+            lower_ang   = 0;         // Lower Bound of camera angle
+            zoom        = 0;                // state of control to zoom
+            glm::mat4 viewMtx = glm::lookAt(        cameraPos,		// camera is located at vehicle
+                                                    cameraPos + camRadius*camDir,		// camera is looking infront of vehicle
 	        				    glm::vec3(  0,  1,  0 ) );		// up vector is (0, 1, 0) - positive Y
             // multiply by the look at matrix - this is the same as our view martix
             glMultMatrixf( &viewMtx[0][0] );
@@ -863,6 +885,4 @@ int main( int argc, char *argv[] ) {
 
 	glfwDestroyWindow( window );// clean up and close our window
 	glfwTerminate();						// shut down GLFW to clean up our context
-
-	return EXIT_SUCCESS;				// exit our program successfully!
 }
