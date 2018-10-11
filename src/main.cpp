@@ -35,10 +35,10 @@
 
 #include <fstream>			// for file I/O
 #include <vector>				// for vector
-
 /* shh, this is temporary because I dunno what paone did w his makefile */
 #include "Bezier.cpp"
 
+#define glBegin(GL_TRINGLE_STRIP) glBegin( GL_POLYGON )
 using namespace std;
 
 //*************************************************************************************
@@ -289,7 +289,16 @@ void drawGrid() {
      */
 	glDisable( GL_LIGHTING );
 
-	/** TODO #3: DRAW A GRID IN THE XZ-PLANE USING GL_LINES **/
+        glBegin(GL_TRIANGLE_STRIP);
+        for (int i = 0; i  < (int)surfacePts.size(); i++) {
+            for (int j = 0; j+1  < (int)surfacePts[i].size(); i++) {
+                
+                glVertex3f(surfacePts[i][j].x,surfacePts[i][j].y,surfacePts[i][j].z);
+                glVertex3f(surfacePts[i][j+1].x,surfacePts[i][j+1].y,surfacePts[i][j+1].z);
+            }
+        }
+        glEnd();
+        /*
         glBegin( GL_LINES );
             glColor3f(1.0f, 1.0f, 1.0f);
             for(int i = -50; i <= 50; i++){
@@ -299,10 +308,7 @@ void drawGrid() {
                 glVertex3f( 50, 0,   i);
             }
         glEnd();
-	/*
-     *	As noted above, we are done drawing with OpenGL Primitives, so we
-     *	must turn lighting back on.
-     */
+	*/
 	glEnable( GL_LIGHTING );
 }
 
@@ -809,7 +815,6 @@ void setupScene() {
 	generateEnvironmentDL();
 
 
-    loadTerrain();
 }
 
 ///*************************************************************************************
@@ -823,11 +828,12 @@ void setupScene() {
 //
 int main( int argc, char *argv[] ) {
         // Load control points
-        if (argc < 2){
+        if (argc < 3){
             fprintf(stdout, "No File Loaded. Use Command line arguments to load a file\n");
         }
         else{
             fprintf(stdout, "File %s successfully loaded\n", argv[1]);
+            loadTerrain(argv[2]);
             loadControlPoints(argv[1]);
         }
 	// GLFW sets up our OpenGL context so must be done first

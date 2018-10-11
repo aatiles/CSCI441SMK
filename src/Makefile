@@ -46,7 +46,7 @@ BUILDING_IN_LAB = 1
 #############################
 
 CXX    = g++
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g 
 
 LAB_INC_PATH = Z:/CSCI441/include
 LAB_LIB_PATH = Z:/CSCI441/lib

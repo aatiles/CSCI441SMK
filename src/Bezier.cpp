@@ -24,13 +24,13 @@
 
 using namespace std;
 
-vector<vector<glm::vec3>> surfacePts;
+vector< vector<glm::vec3> > surfacePts;
 
 
-vector<vector<glm::vec3>> getControlPoints(char *filename, int *row, int *col) {
+vector<vector<glm::vec3> > getControlPoints(char *filename, int *row, int *col) {
     int i;
 
-    vector<vector<glm::vec3>> vecs;
+    vector<vector<glm::vec3> > vecs;
     FILE *f = fopen(filename, "r");
     if (!f) {
         perror("fopen getControlPoints");
@@ -85,11 +85,11 @@ glm::vec3 evaluateBezierSurface(vector<glm::vec3> pts, float u, float v) {
     return evaluateBezierCurve(pu[0], pu[1], pu[2], pu[3], v);
 }
 
-void loadTerrain() {
+void loadTerrain(char *filename) {
     int row, col;
     float step = 0.05f;
-    vector<vector<glm::vec3>> vecs; 
-    vecs = getControlPoints("flat_terrain.csv", &row, &col); 
+    vector<vector<glm::vec3> > vecs; 
+    vecs = getControlPoints(filename, &row, &col); 
 
     surfacePts.resize(row*(1.f/step+1));
 
@@ -102,18 +102,21 @@ void loadTerrain() {
     for (int i = 0; i < row-3; i += 3) {
         for (int j = 0; j < col; j += 3) {
 
-            vector<glm::vec3> pts = {
-                vecs[i][j],   vecs[i+1][j],   vecs[i+2][j],   vecs[i+3][j],
-                vecs[i][j+1], vecs[i+1][j+1], vecs[i+2][j+1], vecs[i+3][j+1],
-                vecs[i][j+2], vecs[i+1][j+2], vecs[i+2][j+2], vecs[i+3][j+2],
-                vecs[i][j+3], vecs[i+1][j+3], vecs[i+2][j+3], vecs[i+3][j+3],
-            };
+            vector<glm::vec3> pts;
+
+            for (int k = 0; k < 4; k++) {
+                for (int l = 0; l < 4; l++) {
+                    pts.push_back(vecs[i+l][j+k]);
+                }
+            }
+
             for (float k = 0; k <= 1; k += step) {
                 for (float l = 0; l <= 1; l += step) {
                     surfacePts.at(i+k/step).at(j+l/step) = 
                         evaluateBezierSurface(pts, k, l);
                 }
             }
+
         }
     } 
 }
