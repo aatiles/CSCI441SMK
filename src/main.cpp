@@ -35,6 +35,10 @@
 
 #include <fstream>			// for file I/O
 #include <vector>				// for vector
+
+/* shh, this is temporary because I dunno what paone did w his makefile */
+#include "Bezier.cpp"
+
 using namespace std;
 
 //*************************************************************************************
@@ -119,24 +123,6 @@ bool loadControlPoints( char* filename ) {
     points.close();
     return true;
 }
-
-// evaluateBezierCurve() ////////////////////////////////////////////////////////
-//
-// Computes a location along a Bezier Curve.
-//
-////////////////////////////////////////////////////////////////////////////////
-glm::vec3 evaluateBezierCurve( glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t ) {
-	glm::vec3 point(0,0,0);
-        float coeff0 = (1-t)*(1-t)*(1-t);
-        float coeff1 = 3*(1-t)*(1-t)*t;
-        float coeff2 = 3*(1-t)*t*t;
-        float coeff3 = t*t*t;
-
-	// TODO #06: Compute a point along a Bezier curve
-        point = coeff0*p0 +  coeff1*p1 +  coeff2*p2 +  coeff3*p3; 
-	return point;
-}
-
 // renderBezierCurve() //////////////////////////////////////////////////////////
 //
 // Responsible for drawing a Bezier Curve as defined by four control points.
@@ -821,6 +807,9 @@ void setupScene() {
 
 	srand( time(NULL) );	// seed our random number generator
 	generateEnvironmentDL();
+
+
+    loadTerrain();
 }
 
 ///*************************************************************************************
