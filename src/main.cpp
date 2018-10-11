@@ -1,5 +1,4 @@
-/*
- *  CSCI 441, Computer Graphics, Fall 2017
+/* *  CSCI 441, Computer Graphics, Fall 2017
  *
  *  Project: A3
  *  File: main.cpp
@@ -32,13 +31,13 @@
 #include <stdio.h>			// for printf functionality
 #include <stdlib.h>			// for exit functionality
 #include <time.h>			  // for time() functionality
+#include <limits>
 
 #include <fstream>			// for file I/O
 #include <vector>				// for vector
 /* shh, this is temporary because I dunno what paone did w his makefile */
 #include "Bezier.cpp"
 
-#define glBegin(GL_TRINGLE_STRIP) glBegin( GL_POLYGON )
 using namespace std;
 
 //*************************************************************************************
@@ -80,6 +79,9 @@ float   turnSpeed       = 0.05;             // Speed yaw of vehicle changes
 float   wheelRotation   = 0;                // State of control to 
 float   wheelSpeed      = 0.7;              // Speed wheels turn as the vehicle is moving
 float   collisionBox    = 0.1;              // Size of box that collision occurs from
+float   yaw;
+
+glm::vec3 *envCurr, *envNext, *envAcross;
 GLuint environmentDL;                       		// display list for the 'city'
 
 
@@ -94,6 +96,8 @@ float   wing_angle      = .4;       // Angle that the wings flap between
 float   wing_offset     = .7;       // Angle that the wings flap around
 bool    toggle_cage     = false;    // Show the control cage
 bool    toggle_curve    = false;    // Show the bezier curve
+
+struct surfaceAttr sAttr;
 
 //*************************************************************************************
 //
@@ -289,12 +293,14 @@ void drawGrid() {
      */
 	glDisable( GL_LIGHTING );
 
-        glBegin(GL_TRIANGLE_STRIP);
-        for (int i = 0; i  < (int)surfacePts.size(); i++) {
-            for (int j = 0; j+1  < (int)surfacePts[i].size(); i++) {
-                
-                glVertex3f(surfacePts[i][j].x,surfacePts[i][j].y,surfacePts[i][j].z);
-                glVertex3f(surfacePts[i][j+1].x,surfacePts[i][j+1].y,surfacePts[i][j+1].z);
+        glHint(GL_POINT_SMOOTH_HINT, GL_FASTEST);
+        glPointSize(5.0f);
+        glBegin(GL_POINTS);
+        for (int i = 0; i < surfacePts.size()-1; i++) {
+            glColor3f((float)i/10+.1, (float)i/10+.1, (float)i/10+.1);
+            for (int j = 0; j < surfacePts[i].size()-1; j++) {
+                glVertex3f(surfacePts.at(i).at(j).x,surfacePts.at(i).at(j).y,surfacePts.at(i).at(j).z);
+                glVertex3f(surfacePts.at(i+1).at(j+1).x,surfacePts.at(i+1).at(j+1).y,surfacePts.at(i+1).at(j+1).z);
             }
         }
         glEnd();
@@ -361,6 +367,24 @@ void generateEnvironmentDL() {
     glEndList();
 }
 
+glm::vec3 *evalGround(float x, float z) {
+    float min = numeric_limits<float>::max();
+    float y = 0.f;
+    glm::vec3 *min_vec = NULL;
+
+    for (int i = 0; i < surfacePts.size(); i++) {
+        for (int j = 0; j < surfacePts[i].size(); j++) {
+            glm::vec3 *vec_p = &surfacePts.at(i).at(j);
+            float res = sqrt(pow(vec_p->x-x, 2) + pow(vec_p->z-z, 2));
+            if (res < min) {
+                min = res;
+                min_vec = vec_p;
+            }
+        }
+    }
+    return min_vec;
+}
+
 //      void updateState()
 //
 //              This is a helper method to update the state of internal variables once per inner loop
@@ -402,9 +426,19 @@ void updateState(){
         vehicleLoc.z =  50 - collisionBox;
     }
 
+    glm::vec3 nextPos = vehicleLoc - (10.f)*vehicleDir;
+    glm::vec3 acrossPos = vehicleLoc - (10.f)*glm::vec3(sin(vehiclePhi), 0, cos(vehiclePhi));
+    envCurr = evalGround(vehicleLoc.x, vehicleLoc.z);
+    envNext = evalGround(nextPos.x, nextPos.z);
+    envAcross = evalGround(acrossPos.x, acrossPos.z);
+
     // Keep Vehicle on the ground
-    vehicleLoc.y = 0;
-    
+    vehicleLoc.y = envCurr->y;
+
+    glm::vec3 vehicleNorm = glm::cross(*envNext - *envCurr, *envAcross - *envNext);
+    vehicleNorm = glm::normalize(vehicleNorm);
+    printf("norm is %f %f %f\n", vehicleNorm.x, vehicleNorm.y, vehicleNorm.z);
+
     // Move Fairy
     fairy_time = fairy_time + fairy_speed;
     if (fairy_time > 1) {
@@ -633,11 +667,15 @@ void drawVehicle(){
     glm::mat4 transMatrix;
     glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
-                                        glm::vec3(vehicleLoc.x, 0, vehicleLoc.z));
+                                        glm::vec3(vehicleLoc.x, vehicleLoc.y, vehicleLoc.z));
         // Rotate based on user input
         transMatrix = glm::rotate(      transMatrix,
                                         vehiclePhi,
                                         glm::vec3(0,-1,0));
+        transMatrix = glm::rotate(      transMatrix,
+                                        yaw,
+                                        glm::vec3(0,0,1));
+        
         transMatrix = glm::scale(       transMatrix,
                                         glm::vec3(0.3f, 0.3f, 0.3f));
         glMultMatrixf( &transMatrix[0][0] );
@@ -833,7 +871,7 @@ int main( int argc, char *argv[] ) {
         }
         else{
             fprintf(stdout, "File %s successfully loaded\n", argv[1]);
-            loadTerrain(argv[2]);
+            loadTerrain(argv[2], &sAttr);
             loadControlPoints(argv[1]);
         }
 	// GLFW sets up our OpenGL context so must be done first

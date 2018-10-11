@@ -26,6 +26,11 @@ using namespace std;
 
 vector< vector<glm::vec3> > surfacePts;
 
+struct surfaceAttr {
+    int row; 
+    int col;
+    float step;
+};
 
 vector<vector<glm::vec3> > getControlPoints(char *filename, int *row, int *col) {
     int i;
@@ -85,38 +90,43 @@ glm::vec3 evaluateBezierSurface(vector<glm::vec3> pts, float u, float v) {
     return evaluateBezierCurve(pu[0], pu[1], pu[2], pu[3], v);
 }
 
-void loadTerrain(char *filename) {
+void loadTerrain(char *filename, struct surfaceAttr *sAttr) {
     int row, col;
     float step = 0.05f;
     vector<vector<glm::vec3> > vecs; 
     vecs = getControlPoints(filename, &row, &col); 
+    puts("LOAD");
+    //surfacePts.resize((row+1)/step);
 
-    surfacePts.resize(row*(1.f/step+1));
-
-    for (int i = 0; i < row/step; i++) {
-        for (int j = 0; j < col/step; j++) {
-            surfacePts[i].resize(col*(1.f/step+1));
-        }
+   /*
+    for (int i = 0; i <= row/step; i++) {
+            surfacePts[i].resize((col+1)/step);
     }
+    */
 
-    for (int i = 0; i < row-3; i += 3) {
-        for (int j = 0; j < col; j += 3) {
+    for (int i = 0; i <= row-3; i += 3) {
+        surfacePts.push_back(vector<glm::vec3>());
+        for (int j = 0; j <= col-3; j += 3) {
 
             vector<glm::vec3> pts;
 
             for (int k = 0; k < 4; k++) {
                 for (int l = 0; l < 4; l++) {
-                    pts.push_back(vecs[i+l][j+k]);
+                    pts.push_back(vecs.at(i+l).at(j+k));
                 }
             }
 
-            for (float k = 0; k <= 1; k += step) {
-                for (float l = 0; l <= 1; l += step) {
-                    surfacePts.at(i+k/step).at(j+l/step) = 
-                        evaluateBezierSurface(pts, k, l);
+            for (float k = 0; k-1 < 0.001; k += step) {
+                for (float l = 0; l-1 < 0.001; l += step) {
+                    /*surfacePts.at(i+k/step).at(j+l/step)*/ 
+                    surfacePts.at(surfacePts.size()-1).push_back(evaluateBezierSurface(pts, k, l));
                 }
             }
 
         }
     } 
+
+    sAttr->row = row;
+    sAttr->col = col;
+    sAttr->step = step;
 }
