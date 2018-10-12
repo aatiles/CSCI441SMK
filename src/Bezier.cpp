@@ -1,3 +1,6 @@
+#ifndef BEZIER
+#define BEZIER
+
 // include the OpenGL library header
 #ifdef __APPLE__					// if compiling on Mac OS
 	#include <OpenGL/gl.h>
@@ -33,8 +36,6 @@ struct surfaceAttr {
 };
 
 vector<vector<glm::vec3> > getControlPoints(char *filename, int *row, int *col) {
-    int i;
-
     vector<vector<glm::vec3> > vecs;
     FILE *f = fopen(filename, "r");
     if (!f) {
@@ -130,3 +131,5 @@ void loadTerrain(char *filename, struct surfaceAttr *sAttr) {
     sAttr->col = col;
     sAttr->step = step;
 }
+
+#endif

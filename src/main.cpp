@@ -35,8 +35,10 @@
 
 #include <fstream>			// for file I/O
 #include <vector>				// for vector
+
 /* shh, this is temporary because I dunno what paone did w his makefile */
 #include "Bezier.cpp"
+#include "Faery.cpp"
 
 using namespace std;
 
@@ -86,7 +88,6 @@ GLuint environmentDL;                       		// display list for the 'city'
 
 
 // Fairy Stuff
-vector<glm::vec3> controlPoints;    // Control points for the bezier curve loaded from a file
 int     resolution      = 30;       // The subdivisions of the Bezier Curve
 int     fairy_seg       = 0;        // Segment of the Bezier curve that the fairy is on
 float   fairy_time      = 0;        // Subdivision of the Segment of the Bezier curve that the fairy is at
@@ -296,9 +297,9 @@ void drawGrid() {
         glHint(GL_POINT_SMOOTH_HINT, GL_FASTEST);
         glPointSize(5.0f);
         glBegin(GL_POINTS);
-        for (int i = 0; i < surfacePts.size()-1; i++) {
+        for (int i = 0; i < (int)surfacePts.size()-1; i++) {
             glColor3f((float)i/10+.1, (float)i/10+.1, (float)i/10+.1);
-            for (int j = 0; j < surfacePts[i].size()-1; j++) {
+            for (int j = 0; j < (int)surfacePts[i].size()-1; j++) {
                 glVertex3f(surfacePts.at(i).at(j).x,surfacePts.at(i).at(j).y,surfacePts.at(i).at(j).z);
                 glVertex3f(surfacePts.at(i+1).at(j+1).x,surfacePts.at(i+1).at(j+1).y,surfacePts.at(i+1).at(j+1).z);
             }
@@ -341,6 +342,7 @@ void drawScene() {
 		}
 	}
 
+
 }
 
 // generateEnvironmentDL() /////////////////////////////////////////////////////
@@ -364,11 +366,10 @@ void generateEnvironmentDL() {
 
 glm::vec3 *evalGround(float x, float z) {
     float min = numeric_limits<float>::max();
-    float y = 0.f;
     glm::vec3 *min_vec = NULL;
 
-    for (int i = 0; i < surfacePts.size(); i++) {
-        for (int j = 0; j < surfacePts[i].size(); j++) {
+    for (int i = 0; i < (int)surfacePts.size(); i++) {
+        for (int j = 0; j < (int)surfacePts[i].size(); j++) {
             glm::vec3 *vec_p = &surfacePts.at(i).at(j);
             float res = sqrt(pow(vec_p->x-x, 2) + pow(vec_p->z-z, 2));
             if (res < min) {
@@ -421,8 +422,8 @@ void updateState(){
         vehicleLoc.z =  50 - collisionBox;
     }
 
-    glm::vec3 nextPos = vehicleLoc - (10.f)*vehicleDir;
-    glm::vec3 acrossPos = vehicleLoc - (10.f)*glm::vec3(sin(vehiclePhi), 0, cos(vehiclePhi));
+    glm::vec3 nextPos = vehicleLoc - (5.f)*vehicleDir;
+    glm::vec3 acrossPos = vehicleLoc - (25.f)*glm::vec3(sin(vehiclePhi), 0, cos(vehiclePhi));
     envCurr = evalGround(vehicleLoc.x, vehicleLoc.z);
     envNext = evalGround(nextPos.x, nextPos.z);
     envAcross = evalGround(acrossPos.x, acrossPos.z);
@@ -432,8 +433,12 @@ void updateState(){
 
     glm::vec3 vehicleNorm = glm::cross(*envNext - *envCurr, *envAcross - *envNext);
     vehicleNorm = glm::normalize(vehicleNorm);
-    printf("norm is %f %f %f\n", vehicleNorm.x, vehicleNorm.y, vehicleNorm.z);
+    //printf("norm is %f %f %f\n", vehicleNorm.x, vehicleNorm.y, vehicleNorm.z);
 
+    glm::vec3 tang = *envNext-*envCurr;
+    yaw = acos(glm::dot(tang, glm::vec3(0,1,0))/(glm::length(tang)))-(float)M_PI/2.f;
+
+    printf("yaw is %f\n", yaw);
     // Move Fairy
     fairy_time = fairy_time + fairy_speed;
     if (fairy_time > 1) {
@@ -444,6 +449,8 @@ void updateState(){
     if (camera_mov == GLFW_PRESS || camera_mov == GLFW_REPEAT){
         cameraPos = cameraPos + camSpeed*camDir;
     }
+
+    updateSpectators();
 }
 
 // Draw the handlebars of the bike
@@ -595,7 +602,7 @@ void drawCurve(){
         glm::mat4 trans;
         glm::vec3 point;
         if (toggle_cage){
-            for (int i = 0; i < controlPoints.size(); i++){
+            for (int i = 0; i < (int)controlPoints.size(); i++){
                 glPushMatrix();
                     trans = glm::translate( glm::mat4(),
                                             controlPoints[i]);
@@ -608,7 +615,7 @@ void drawCurve(){
             glLineWidth(3.0f);
             glBegin( GL_LINES );
                 glColor3f(1.0f,1.0f,0.0f);
-                for (int i = 1; i < controlPoints.size(); i++){
+                for (int i = 1; i < (int)controlPoints.size(); i++){
                     point = controlPoints[i-1];
                     glVertex3f(point.x, point.y, point.z);
                     point = controlPoints[i];
@@ -618,7 +625,7 @@ void drawCurve(){
         }
         if (toggle_curve){
             glLineWidth(3.0f);
-            for (int i = 0; i < controlPoints.size()/3; i++){
+            for (int i = 0; i < (int)controlPoints.size()/3; i++){
                 renderBezierCurve( controlPoints[3*i+0],  controlPoints[3*i+1], controlPoints[3*i+2], controlPoints[3*i+3],  resolution); 
             }
         }
@@ -693,6 +700,8 @@ void drawVehicle(){
 void renderScene(void)  {
     glCallList( environmentDL );
     drawVehicle();
+    drawSpectators();
+    drawTrack();
 }
 
 void genCamera(){
@@ -867,6 +876,7 @@ int main( int argc, char *argv[] ) {
         else{
             fprintf(stdout, "File %s successfully loaded\n", argv[1]);
             loadTerrain(argv[2], &sAttr);
+            loadFaeryControlPoints(argv[1]);
             loadControlPoints(argv[1]);
         }
 	// GLFW sets up our OpenGL context so must be done first
