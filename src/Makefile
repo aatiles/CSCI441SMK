@@ -24,10 +24,10 @@
 TARGET = SMK
 OBJECTS = main.o
 
-LOCAL_INC_PATH = /Users/jpaone/Desktop/include
-LOCAL_LIB_PATH = /Users/jpaone/Desktop/lib
+LOCAL_INC_PATH = ../../include
+LOCAL_LIB_PATH = /usr/lib
 
-BUILDING_IN_LAB = 1
+BUILDING_IN_LAB = 0
 
 #########################################################################################
 #########################################################################################
@@ -80,7 +80,7 @@ else
 
 	# Linux and all other builds
 	else
-		LIBS += -lGL -lglfw3
+		LIBS += -lGL -lglfw
 	endif
 endif
 
