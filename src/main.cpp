@@ -332,7 +332,7 @@ void drawScene() {
 					glm::mat4 scalMtx = glm::scale(glm::mat4(), glm::vec3(1, height, 1));
 					glMultMatrixf(&scalMtx[0][0]); {
 						CSCI441::drawSolidCube(1);
-						CSCI441::drawSolidCone();
+						CSCI441::drawSolidCone(1, 1, 10, 10);
 					};
 					glMultMatrixf(&(glm::inverse(scalMtx))[0][0]);
 				};

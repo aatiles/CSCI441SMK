@@ -126,9 +126,10 @@ void renderBezierCurve() {
     glBegin(GL_LINE_STRIP);
     glLineWidth(3);
     glColor3f(0.f, 0.f, 1.f);
-
-    for (glm::vec3 vec : vecs) {
-        glVertex3f(vec.x, vec.y, vec.z);
+	int vecSize = vecs.size();
+	for (int k = 0; k < vecSize; k++) {
+		glm::vec3 temp = vecs.at(k);
+		glVertex3f(temp.x, temp.y, temp.z);
     }
 
     glEnd();
