@@ -120,4 +120,4 @@ $(TARGET): $(OBJECTS)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LIBPATH) $(LIBS)
 
 # DEPENDENCIES
-main.o: main.cpp
+main.o: main.cpp Bezier.cpp Faery.cpp
