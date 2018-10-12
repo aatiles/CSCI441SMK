@@ -27,7 +27,7 @@ OBJECTS = main.o
 LOCAL_INC_PATH = C:/Code/CSCI441/include
 LOCAL_LIB_PATH = C:/Code/CSCI441/lib
 
-BUILDING_IN_LAB = 1
+BUILDING_IN_LAB = 0
 
 #########################################################################################
 #########################################################################################
@@ -120,4 +120,4 @@ $(TARGET): $(OBJECTS)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LIBPATH) $(LIBS)
 
 # DEPENDENCIES
-main.o: main.cpp
+main.o: main.cpp Bezier.cpp Faery.cpp

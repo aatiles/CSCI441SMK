@@ -71,6 +71,7 @@ float       camSpeed    = .08;
 
 // Vehicle stuff
 glm::vec3 vehicleLoc;
+glm::mat4 vehicleOrient = glm::mat4();
 float   vehicleSpeed    = 0.05;             // Amount the vehicle changes position when moving
 int     goingForward    = 0;                // State of control to go forward 
 int     goingBackward   = 0;                // State of control to go backward
@@ -81,9 +82,8 @@ float   turnSpeed       = 0.05;             // Speed yaw of vehicle changes
 float   wheelRotation   = 0;                // State of control to 
 float   wheelSpeed      = 0.7;              // Speed wheels turn as the vehicle is moving
 float   collisionBox    = 0.1;              // Size of box that collision occurs from
-float   yaw;
 
-glm::vec3 *envCurr, *envNext, *envAcross;
+glm::vec3 *envCurr;
 GLuint environmentDL;                       		// display list for the 'city'
 
 
@@ -104,6 +104,12 @@ struct surfaceAttr sAttr;
 //
 // Helper Functions
 
+bool checkBounds(glm::vec3 pos) {
+    return (pos.x <= 0.1f) &&
+           (pos.x >= (float)sAttr.row - 0.1f) &&
+           (pos.z <= 0.1f) &&
+           (pos.z >= (float)sAttr.col - 0.1f);
+}
 
 // loadControlPoints() /////////////////////////////////////////////////////////
 //
@@ -287,36 +293,25 @@ static void mouse_button_callback( GLFWwindow *window, int button, int action, i
 ////////////////////////////////////////////////////////////////////////////////
 void drawGrid() {
 	/*
-     *	We will get to why we need to do this when we talk about lighting,
-     *	but for now whenever we want to draw something with an OpenGL
-     *	Primitive - like a line, quad, point - we need to disable lighting
-     *	and then reenable it for use with the CSCI441 3D Objects.
-     */
-	glDisable( GL_LIGHTING );
+	 *	We will get to why we need to do this when we talk about lighting,
+	 *	but for now whenever we want to draw something with an OpenGL
+	 *	Primitive - like a line, quad, point - we need to disable lighting
+	 *	and then reenable it for use with the CSCI441 3D Objects.
+	 */
 
-        glHint(GL_POINT_SMOOTH_HINT, GL_FASTEST);
-        glPointSize(5.0f);
-        glBegin(GL_POINTS);
-        for (int i = 0; i < (int)surfacePts.size()-1; i++) {
-            glColor3f((float)i/10+.1, (float)i/10+.1, (float)i/10+.1);
-            for (int j = 0; j < (int)surfacePts[i].size()-1; j++) {
-                glVertex3f(surfacePts.at(i).at(j).x,surfacePts.at(i).at(j).y,surfacePts.at(i).at(j).z);
-                glVertex3f(surfacePts.at(i+1).at(j+1).x,surfacePts.at(i+1).at(j+1).y,surfacePts.at(i+1).at(j+1).z);
-            }
-        }
-        glEnd();
-        /*
-        glBegin( GL_LINES );
-            glColor3f(1.0f, 1.0f, 1.0f);
-            for(int i = -50; i <= 50; i++){
-                glVertex3f(  i, 0, -50);
-                glVertex3f(  i, 0,  50);
-                glVertex3f(-50, 0,   i);
-                glVertex3f( 50, 0,   i);
-            }
-        glEnd();
-	*/
-	glEnable( GL_LIGHTING );
+	for (int i = 0; i < (int)surfacePts.size() - 1; i++) {
+		for (int j = 0; j < (int)surfacePts[i].size()-1; j++) {
+			glBegin(GL_TRIANGLE_STRIP);
+			glNormal3f(0, 1, 0);
+			glColor3f(0, 0.75f, 0);
+			glVertex3f(surfacePts.at(i).at(j).x, surfacePts.at(i).at(j).y, surfacePts.at(i).at(j).z);
+			glVertex3f(surfacePts.at(i+1).at(j).x, surfacePts.at(i+1).at(j).y, surfacePts.at(i+1).at(j).z);
+			glVertex3f(surfacePts.at(i).at(j+1).x, surfacePts.at(i).at(j+1).y, surfacePts.at(i).at(j+1).z);
+			glVertex3f(surfacePts.at(i+1).at(j + 1).x, surfacePts.at(i+1).at(j + 1).y, surfacePts.at(i+1).at(j + 1).z);
+			glEnd();
+		}
+	}
+	
 }
 
 //Makes the scenery around the map
@@ -377,21 +372,31 @@ void generateEnvironmentDL() {
        glEndList();
 }
 
-glm::vec3 *evalGround(float x, float z) {
-    float min = numeric_limits<float>::max();
-    glm::vec3 *min_vec = NULL;
-
-    for (int i = 0; i < (int)surfacePts.size(); i++) {
-        for (int j = 0; j < (int)surfacePts[i].size(); j++) {
-            glm::vec3 *vec_p = &surfacePts.at(i).at(j);
-            float res = sqrt(pow(vec_p->x-x, 2) + pow(vec_p->z-z, 2));
-            if (res < min) {
-                min = res;
-                min_vec = vec_p;
-            }
+glm::vec3 *evalGround(float x, float z, glm::vec3& dU, glm::vec3& dV) {
+    size_t i = ((int)x/4) * 4;
+    size_t j = ((int)z/4) * 4;
+    vector<glm::vec3> pts;
+    
+    if (i < 0)
+        i = 0;
+    else if (!(i < surfaceCtrlPts.size()-3))
+        i = surfaceCtrlPts.size() - 4;
+    
+    if (j < 0)
+        j = 0;
+    else if (!(j < surfaceCtrlPts.at(0).size()-3))
+        j = surfaceCtrlPts.at(0).size() - 4;
+    
+    for (size_t k = 0; k < 4; k++) {
+        for (size_t l = 0; l < 4; l++) {
+            pts.push_back(surfaceCtrlPts.at(i+l).at(j+k));
         }
     }
-    return min_vec;
+    
+    float u = (x - i)/4.f;
+    float v = (z - j)/4.f;
+    getBezSurfPartialDeriv(pts, u, v, dU, dV);
+    return new glm::vec3(evaluateBezierSurface(pts, u, v));
 }
 
 //      void updateState()
@@ -409,48 +414,36 @@ void updateState(){
         vehiclePhi = vehiclePhi + turnSpeed; 
     }
     // Check if the vehicle is going forwards
-    if (goingForward == GLFW_PRESS || goingForward == GLFW_REPEAT){
+    if ((goingForward == GLFW_PRESS || goingForward == GLFW_REPEAT) &&
+        (!checkBounds(vehicleLoc - vehicleSpeed*vehicleDir))) {
          vehicleLoc     = vehicleLoc - vehicleSpeed*vehicleDir;
          wheelRotation  = wheelRotation + wheelSpeed; 
 
     }
     // Check if the vehicle is going backwards
-    if (goingBackward == GLFW_PRESS || goingBackward == GLFW_REPEAT){
+    if ((goingBackward == GLFW_PRESS || goingBackward == GLFW_REPEAT) &&
+        (!checkBounds(vehicleLoc + vehicleSpeed*vehicleDir))) {
          vehicleLoc = vehicleLoc + vehicleSpeed*vehicleDir;
          wheelRotation  = wheelRotation - wheelSpeed; 
     }
     
-    // Bound the vehicle location
-    // Create a collision box around the vehicle
-    if (vehicleLoc.x < -50 + collisionBox){
-        vehicleLoc.x = -50 + collisionBox;
-    }
-    if (vehicleLoc.x >  50 - collisionBox){
-        vehicleLoc.x =  50 - collisionBox;
-    }
-    if (vehicleLoc.z < -50 + collisionBox){
-        vehicleLoc.z = -50 + collisionBox;
-    }
-    if (vehicleLoc.z >  50 - collisionBox){
-        vehicleLoc.z =  50 - collisionBox;
-    }
-
-    glm::vec3 nextPos = vehicleLoc - (5.f)*vehicleDir;
-    glm::vec3 acrossPos = vehicleLoc - (25.f)*glm::vec3(sin(vehiclePhi), 0, cos(vehiclePhi));
-    envCurr = evalGround(vehicleLoc.x, vehicleLoc.z);
-    envNext = evalGround(nextPos.x, nextPos.z);
-    envAcross = evalGround(acrossPos.x, acrossPos.z);
-
+	// Get the current y coordinate and the tangents along x and z
+    glm::vec3 dU, dV;
+    envCurr = evalGround(vehicleLoc.x, vehicleLoc.z, dU, dV);
+    
     // Keep Vehicle on the ground
     vehicleLoc.y = envCurr->y;
+    //printf("pos is %f %f %f\n", vehicleLoc.x, vehicleLoc.y, vehicleLoc.z);
+    
+	// Generate the orientation of the vehicle
+    glm::vec3 vehicleUP = glm::normalize(glm::cross(dV, dU));
+	glm::vec3 vehicleRight = glm::normalize(glm::cross(vehicleDir, vehicleUP));
+	glm::vec3 vehicleForward = glm::normalize(glm::cross(vehicleUP, vehicleRight));
 
-    glm::vec3 vehicleNorm = glm::cross(*envNext - *envCurr, *envAcross - *envNext);
-    vehicleNorm = glm::normalize(vehicleNorm);
-    //printf("norm is %f %f %f\n", vehicleNorm.x, vehicleNorm.y, vehicleNorm.z);
-
-    glm::vec3 tang = *envNext-*envCurr;
-    yaw = acos(glm::dot(tang, glm::vec3(0,1,0))/(glm::length(tang)))-(float)M_PI/2.f;
-    if (yaw != yaw) yaw = 0;
+	// Set the vehicle orientation
+	vehicleOrient[0] = glm::vec4(vehicleForward.x, vehicleForward.y, vehicleForward.z, 0.0f);
+	vehicleOrient[1] = glm::vec4(vehicleUP.x, vehicleUP.y, vehicleUP.z, 0.0f);
+	vehicleOrient[2] = glm::vec4(vehicleRight.x, vehicleRight.y, vehicleRight.z, 0.0f);
 
     // Move Fairy
     fairy_time = fairy_time + fairy_speed;
@@ -469,7 +462,6 @@ void updateState(){
 // Draw the handlebars of the bike
 void drawHandleBars() {
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(-0.3, 0.2, 0));
         transMatrix = glm::rotate(      transMatrix,
@@ -477,15 +469,13 @@ void drawHandleBars() {
                                         glm::vec3(0,0,1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawSolidTeapot(.3);
-    glPopMatrix();
-
+    glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
 
 }
 
 // Draw the connecting bar of the bike
 void drawLowerBar(){
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(-.5, .1, 0));
         transMatrix = glm::rotate(      transMatrix,
@@ -493,13 +483,12 @@ void drawLowerBar(){
                                         glm::vec3(0,0,1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawSolidCylinder(0.06f,0.06f,1.0f,6,6);
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
     
 }
 // Draw the seat of the bike
 void drawSeat(){
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(0.3, -0.2, 0));
         transMatrix = glm::rotate(      transMatrix,
@@ -507,28 +496,26 @@ void drawSeat(){
                                         glm::vec3(0,0,1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawSolidTeapot(.2);
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
 
 }
 // Draw the chasis of the bike
 void drawChasis(){
     glColor3f(0,1,0);
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(0, 0.5, 0));
         glMultMatrixf( &transMatrix[0][0] );
         drawHandleBars();
         drawLowerBar();
         drawSeat();
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
     
 }
 // Draw the front wheel
 void drawFrontWheel(){
     glColor3f(0,1,1);
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(-0.35, 0.3, 0));
         // Rotate based on movement
@@ -537,14 +524,13 @@ void drawFrontWheel(){
                                         glm::vec3(0,0,1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawWireSphere(.3,6,6);
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
     
 }
 // Draw the back wheel
 void drawBackWheel(){
     glColor3f(0,1,1);
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(0.3, 0.15, 0));
         // Rotate based on movement
@@ -553,14 +539,13 @@ void drawBackWheel(){
                                         glm::vec3(0,0,1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawWireSphere(.15,6,6);
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
     
 }
 
 // Draw the left wing of the fairy
 void fairyWingLeft(){
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::rotate(      transMatrix,
                                         (float) (wing_offset + wing_angle*sin(2*M_PI*fairy_time*wing_speed)),
                                         glm::vec3(0,1,0));
@@ -569,13 +554,12 @@ void fairyWingLeft(){
                                         glm::vec3(0,0,-1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawSolidPartialDisk(.1, 2.4, 16,16, 0, 125);
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
 }
 
 // Draw the right wing of the fairy
 void fairyWingRight(){
     glm::mat4 transMatrix;
-    glPushMatrix();
         transMatrix = glm::rotate(      transMatrix,
                                         (float) (-wing_offset - wing_angle*sin(2*M_PI*fairy_time*wing_speed)),
                                         glm::vec3(0,1,0));
@@ -584,13 +568,14 @@ void fairyWingRight(){
                                         glm::vec3(0,0,-1));
         glMultMatrixf( &transMatrix[0][0] );
         CSCI441::drawSolidPartialDisk(.1, 2.4, 16,16, 0, 125);
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
+        
 }
 
 // Draw the wings of the fairy
 void fairyWings(){
     glm::mat4 transMatrix;
-    glPushMatrix();
+
         /*
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(location.x, location.y, location.z));
@@ -600,7 +585,7 @@ void fairyWings(){
         glMultMatrixf( &transMatrix[0][0] );
         fairyWingLeft();
         fairyWingRight();
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
 }
 
 // Draw the fairy body
@@ -616,14 +601,13 @@ void drawCurve(){
         glm::vec3 point;
         if (toggle_cage){
             for (int i = 0; i < (int)controlPoints.size(); i++){
-                glPushMatrix();
                     trans = glm::translate( glm::mat4(),
                                             controlPoints[i]);
                     glMultMatrixf( &trans[0][0] ); 
                         glColor3f(0,1,0);
                         glLoadName( i );
                         CSCI441::drawSolidSphere(.15,10,10);
-                glPopMatrix();
+                    glMultMatrixf( &(glm::inverse(trans))[0][0] );
             }
             glLineWidth(3.0f);
             glBegin( GL_LINES );
@@ -653,14 +637,15 @@ void drawFairy(){
                                                 controlPoints[3*fairy_seg+2], 
                                                 controlPoints[3*fairy_seg+3], 
                                                 fairy_time); 
-    glPushMatrix();
+
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(0, .5, 0));
         transMatrix = glm::scale(       transMatrix,
                                          glm::vec3(0.4f, 0.4f, 0.4f));
         glMultMatrixf( &transMatrix[0][0] );
         drawCurve();
-        glPushMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
+
             transMatrix = glm::translate(   glm::mat4(),
                                             glm::vec3(location.x, location.y, location.z));
             // Rotate based on user input
@@ -673,23 +658,19 @@ void drawFairy(){
                                             glm::vec3(0.5f, 0.5f, 0.5f));
             glMultMatrixf( &transMatrix[0][0] );
             fairyBody();
-        glPopMatrix();
-    glPopMatrix();
+            glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
+
 }
 
 // Draw the vehicle
 void drawVehicle(){
     glm::mat4 transMatrix;
-    glPushMatrix();
+ 
         transMatrix = glm::translate(   glm::mat4(),
                                         glm::vec3(vehicleLoc.x, vehicleLoc.y, vehicleLoc.z));
-        // Rotate based on user input
-        transMatrix = glm::rotate(      transMatrix,
-                                        vehiclePhi,
-                                        glm::vec3(0,-1,0));
-        transMatrix = glm::rotate(      transMatrix,
-                                        yaw,
-                                        glm::vec3(0,0,1));
+        // We determined the orientation previously;
+
+		transMatrix = transMatrix * vehicleOrient;
         
         transMatrix = glm::scale(       transMatrix,
                                         glm::vec3(0.3f, 0.3f, 0.3f));
@@ -700,7 +681,8 @@ void drawVehicle(){
 
         // Add a helper
         drawFairy();
-    glPopMatrix();
+        glMultMatrixf( &(glm::inverse(transMatrix))[0][0] );
+
 }
 
 //
@@ -860,8 +842,8 @@ void setupOpenGL() {
 void setupScene() {
 	// give the camera a scenic starting point.
 	vehicleLoc.x = 0;
-	vehicleLoc.y = 0;
-	vehicleLoc.z = 0;
+    vehicleLoc.y = 0;
+    vehicleLoc.z = 0;
 	cameraTheta = -M_PI / 3.0f;
 	cameraPhi = 4*M_PI / 7;
 	recomputeOrientation();
