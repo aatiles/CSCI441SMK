@@ -104,6 +104,12 @@ struct surfaceAttr sAttr;
 //
 // Helper Functions
 
+bool checkBounds(glm::vec3 pos) {
+    return (pos.x >= 0.1f) &&
+           (pos.x <= 24.9f) &&
+           (pos.z >= 0.1f) &&
+           (pos.z <= 12.9f);
+}
 
 // loadControlPoints() /////////////////////////////////////////////////////////
 //
@@ -409,30 +415,17 @@ void updateState(){
         vehiclePhi = vehiclePhi + turnSpeed; 
     }
     // Check if the vehicle is going forwards
-    if (goingForward == GLFW_PRESS || goingForward == GLFW_REPEAT){
+    if ((goingForward == GLFW_PRESS || goingForward == GLFW_REPEAT) &&
+        (!checkBounds(vehicleLoc - vehicleSpeed*vehicleDir))) {
          vehicleLoc     = vehicleLoc - vehicleSpeed*vehicleDir;
          wheelRotation  = wheelRotation + wheelSpeed; 
 
     }
     // Check if the vehicle is going backwards
-    if (goingBackward == GLFW_PRESS || goingBackward == GLFW_REPEAT){
+    if ((goingBackward == GLFW_PRESS || goingBackward == GLFW_REPEAT) &&
+        (!checkBounds(vehicleLoc + vehicleSpeed*vehicleDir))) {
          vehicleLoc = vehicleLoc + vehicleSpeed*vehicleDir;
          wheelRotation  = wheelRotation - wheelSpeed; 
-    }
-    
-    // Bound the vehicle location
-    // Create a collision box around the vehicle
-    if (vehicleLoc.x < -50 + collisionBox){
-        vehicleLoc.x = -50 + collisionBox;
-    }
-    if (vehicleLoc.x >  50 - collisionBox){
-        vehicleLoc.x =  50 - collisionBox;
-    }
-    if (vehicleLoc.z < -50 + collisionBox){
-        vehicleLoc.z = -50 + collisionBox;
-    }
-    if (vehicleLoc.z >  50 - collisionBox){
-        vehicleLoc.z =  50 - collisionBox;
     }
 
     glm::vec3 nextPos = vehicleLoc - (5.f)*vehicleDir;
@@ -859,9 +852,9 @@ void setupOpenGL() {
 //
 void setupScene() {
 	// give the camera a scenic starting point.
-	vehicleLoc.x = 0;
-	vehicleLoc.y = 0;
-	vehicleLoc.z = 0;
+	vehicleLoc.x = surfacePts.size()/2;
+    vehicleLoc.z = surfacePts.at(0).size()/2;
+	vehicleLoc.y = evalGround(vehicleLoc.x, vehicleLoc.z)->y;
 	cameraTheta = -M_PI / 3.0f;
 	cameraPhi = 4*M_PI / 7;
 	recomputeOrientation();
