@@ -450,8 +450,8 @@ void updateState(){
 
     glm::vec3 tang = *envNext-*envCurr;
     yaw = acos(glm::dot(tang, glm::vec3(0,1,0))/(glm::length(tang)))-(float)M_PI/2.f;
+    if (yaw != yaw) yaw = 0;
 
-    printf("yaw is %f\n", yaw);
     // Move Fairy
     fairy_time = fairy_time + fairy_speed;
     if (fairy_time > 1) {
