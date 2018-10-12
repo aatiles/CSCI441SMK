@@ -34,6 +34,7 @@
 int tick = 0;
 int g_tick = 0;
 int numSegments = 0;
+bool leftThis = false;
 
 glm::vec3 paramFaeryPos;
 glm::vec3 eqFaeryPos;
@@ -65,6 +66,59 @@ double getBezier(double p0, double p1, double p2, double p3, float t) {
     return pow(1-t, 3)*p0 + 3*pow(1-t, 2)*t*p1 + 3*(1-t)*t*t*p2 + t*t*t*p3;
 }
 
+
+void drawHead() {
+	//base of head
+	glColor3f(.94, .85, .09);
+	glm::mat4 transMtx = glm::translate(glm::mat4(), glm::vec3(0, 4, 0));
+	glMultMatrixf(&transMtx[0][0]);
+	CSCI441::drawSolidSphere(1.0, 50, 50);
+	glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+
+	//hair bun
+	transMtx = glm::translate(glm::mat4(), glm::vec3(0, 4.25, 1));
+	glMultMatrixf(&transMtx[0][0]);
+	CSCI441::drawSolidTorus(.25, .3, 50, 50);
+	glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+}
+void drawArms() {
+	//arms
+	glm::mat4 transMtx = glm::translate(glm::mat4(), glm::vec3(0, 3, 0));
+	glMultMatrixf(&transMtx[0][0]); {
+		glm::mat4 scalMtx = glm::scale(glm::mat4(), glm::vec3(3, .5, .5));
+		glMultMatrixf(&scalMtx[0][0]);
+			CSCI441::drawSolidCube(1);
+		glMultMatrixf(&(glm::inverse(scalMtx))[0][0]);
+	};
+	glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+}
+void drawBody() {
+	glColor3f(.11, .27, .53);
+	//chest
+	glm::mat4 transMtx = glm::translate(glm::mat4(), glm::vec3(0, 0, 0));
+	glMultMatrixf(&transMtx[0][0]);
+	CSCI441::drawSolidCone(2.0, 4.0, 50, 50); //for body of character
+	glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+
+	transMtx = glm::translate(glm::mat4(), glm::vec3(0, 3, 0));
+	glMultMatrixf(&transMtx[0][0]);
+	CSCI441::drawSolidCube(1.25); //for body of character
+	glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+
+}
+void drawCharacter() {
+	drawBody();
+	drawHead();
+	float shift;
+	if (leftThis)
+		shift = .55;
+	else
+		shift = -.55;
+	glm::mat4 transMtx = glm::translate(glm::mat4(), glm::vec3(shift, 0, 0));
+	glMultMatrixf(&transMtx[0][0]);
+	drawArms();
+	glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+}
 /*
 glm::vec3 evaluateBezierCurve( glm::vec3 p0, glm::vec3 p1, glm::vec3 p2, glm::vec3 p3, float t ) {
     glm::vec3 point(0,0,0);
@@ -202,6 +256,8 @@ void updateSpectators() {
     updateParamFaery();
     updateEqFaery();
     g_tick++;
+	if (g_tick % 10 == 0)
+		leftThis = !leftThis;
 }
 
 void drawSpectators() {
@@ -210,7 +266,7 @@ void drawSpectators() {
     glColor3f(0,1,0);
     mtx = glm::translate(glm::mat4(), paramFaeryPos);
     glMultMatrixf(&mtx[0][0]);
-    CSCI441::drawSolidSphere(0.5, 10, 10);
+	drawCharacter();
     glMultMatrixf(&(glm::inverse(mtx))[0][0]); 
 
     glColor3f(1,0,0);
