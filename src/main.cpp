@@ -318,34 +318,29 @@ void drawGrid() {
 	glEnable( GL_LIGHTING );
 }
 
-// drawCity() //////////////////////////////////////////////////////////////////
-//
-//  Function to draw a random city using CSCI441 3D Cubes
-//
-////////////////////////////////////////////////////////////////////////////////
-void drawBuilding(int x, int y){
-    glm::mat4 build;
-    float height = 9*getRand() + 1;
-    glPushMatrix();
-        build = glm::translate( glm::mat4(),
-                                glm::vec3(x+.5, height/2, y+.5));
-        build = glm::scale(     build,
-                                glm::vec3(1,height,1));
-        glMultMatrixf( &build[0][0] );
-        glColor3f(getRand(), getRand(), getRand());
-        CSCI441::drawSolidCube(1);
-    glPopMatrix();
-}
+void drawScene() {
+	// Code from Lab 2
+	for (int x = -50; x <= 50; x += 5) {
+		for (int z = -50; z <= 50; z += 5) {
+			float random = getRand();
+			if (random < 0.4 && x % 2 == 0 && z % 2 == 0) {
+				glColor3f(getRand(), getRand(), getRand());
+				int height = rand() % 10 + 1;
+				glm::mat4 transMtx = glm::translate(glm::mat4(), glm::vec3(x, height / 2, z));
+				glMultMatrixf(&transMtx[0][0]); {
+					glm::mat4 scalMtx = glm::scale(glm::mat4(), glm::vec3(1, height, 1));
+					glMultMatrixf(&scalMtx[0][0]); {
+						CSCI441::drawSolidCube(1);
+						CSCI441::drawSolidCone();
+					};
+					glMultMatrixf(&(glm::inverse(scalMtx))[0][0]);
+				};
+				glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
+			}
 
-void drawCity() {
-    // TODO #4: Randomly place buildings of varying heights with random colors
-    for (int x = -50; x< 50; x++){
-        for (int y = -50; y < 50; y++){
-            if (getRand() < 0.05){
-                drawBuilding(x,y);
-            }
-        }
-    }
+		}
+	}
+
 }
 
 // generateEnvironmentDL() /////////////////////////////////////////////////////
@@ -363,8 +358,8 @@ void generateEnvironmentDL() {
     environmentDL = glGenLists(1);
     glNewList( environmentDL , GL_COMPILE );
         drawGrid();
-        drawCity();
-    glEndList();
+		drawScene();
+       glEndList();
 }
 
 glm::vec3 *evalGround(float x, float z) {
