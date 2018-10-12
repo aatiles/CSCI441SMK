@@ -319,8 +319,8 @@ void drawGrid() {
 	glEnable( GL_LIGHTING );
 }
 
+//Makes the scenery around the map
 void drawScene() {
-	// Code from Lab 2
 	for (int x = -50; x <= 50; x += 5) {
 		for (int z = -50; z <= 50; z += 5) {
 			float random = getRand();
@@ -331,17 +331,30 @@ void drawScene() {
 				glMultMatrixf(&transMtx[0][0]); {
 					glm::mat4 scalMtx = glm::scale(glm::mat4(), glm::vec3(1, height, 1));
 					glMultMatrixf(&scalMtx[0][0]); {
+						//TREES
 						CSCI441::drawSolidCube(1);
-						CSCI441::drawSolidCone(1, 1, 10, 10);
+						CSCI441::drawSolidCone(3, 1, 10, 10);
 					};
 					glMultMatrixf(&(glm::inverse(scalMtx))[0][0]);
 				};
 				glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
 			}
+			else if (random > 0.5 && x % 2 == 1 && z % 2 == 1) {
+				glColor3f(getRand(), getRand(), getRand());
+				int height = rand() % 5 + 1;
+				glm::mat4 transMtx = glm::translate(glm::mat4(), glm::vec3(x, height / 2, z));
+				glMultMatrixf(&transMtx[0][0]); {
+					glm::mat4 scalMtx = glm::scale(glm::mat4(), glm::vec3(1, height, 1));
+					glMultMatrixf(&scalMtx[0][0]); {
+						CSCI441::drawWireTorus(.25, .5, 10, 10);
+					};
+					glMultMatrixf(&(glm::inverse(scalMtx))[0][0]);
+				};
+				glMultMatrixf(&(glm::inverse(transMtx))[0][0]);
 
+			}
 		}
 	}
-
 
 }
 
